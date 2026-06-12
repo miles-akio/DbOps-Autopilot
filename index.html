@@ -1,21 +1,83 @@
 <!DOCTYPE html>
+<!-- Tells the browser this is an HTML5 document — must be the very first line -->
+
 <html lang="en">
+<!-- Root element of the page. lang="en" helps screen readers and search engines
+     know the content is in English -->
+
   <head>
+    <!-- The <head> contains metadata — nothing here is visually rendered directly,
+         but it controls how the page loads, looks, and is identified -->
+
     <meta charset="UTF-8" />
+    <!-- Sets the character encoding to UTF-8, which supports all standard characters,
+         symbols, and international text. Prevents garbled characters from appearing -->
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Makes the page responsive on mobile devices. Without this, mobile browsers
+         would zoom out and render the page at desktop width, making it unreadable -->
+
     <title>DbOps Autopilot — Distributed DB Command Center</title>
+    <!-- Text shown in the browser tab and used by search engines as the page title -->
+
+    <!-- ICON LIBRARY -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css" />
+    <!-- Loads the Tabler Icons webfont from a CDN. This gives us access to 5800+
+         outline icons via simple CSS classes like <i class="ti ti-database">.
+         Pinned to version 3.7.0 so the icon set doesn't change unexpectedly -->
+
+    <!-- FONT LOADING (two-step process for performance) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- rel="preconnect" opens the TCP connection to Google's font servers early,
+         before the font request is actually made. This shaves ~100-300ms off
+         font load time. Two domains are needed: googleapis.com serves the CSS,
+         gstatic.com serves the actual font files. crossorigin is required on
+         gstatic because the font files are fetched as a cross-origin resource -->
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Loads the Inter typeface in 5 weights (400=regular, 500=medium, 600=semibold,
+         700=bold, 800=extrabold). Inter is designed for screens and is highly
+         legible at small sizes — ideal for a dense data dashboard.
+         display=swap means the browser shows a fallback font immediately while
+         Inter loads, preventing an invisible-text flash -->
+
+    <!-- GLOBAL BASE STYLES -->
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      /* Universal reset: box-sizing: border-box makes padding and borders included
+         in an element's declared width/height (not added on top), which makes
+         layout math predictable. margin/padding reset removes browser defaults
+         that would otherwise cause inconsistent spacing across browsers.
+         ::before and ::after covers pseudo-elements like decorative content */
+
       html, body, #root { height: 100%; }
+      /* Makes the app fill the full browser viewport height. Without this,
+         React's root div (#root) would only be as tall as its content,
+         breaking any full-height layout (sticky headers, scrollable panels, etc.) */
+
       body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f4f6fa; }
+      /* Sets Inter as the primary font with a system font fallback chain:
+         -apple-system = San Francisco on macOS/iOS
+         BlinkMacSystemFont = San Francisco on Chrome/macOS
+         sans-serif = generic fallback on any OS
+         background: #f4f6fa is the light blue-gray page background visible
+         behind all panels and cards */
     </style>
   </head>
+
   <body>
+
     <div id="root"></div>
+    <!-- Empty div that React mounts into. React's createRoot() in main.jsx targets
+         this element and renders the entire application inside it. The div starts
+         empty — React fills it dynamically at runtime -->
+
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Loads the React app entry point. type="module" enables ES module syntax
+         (import/export) natively in the browser and tells Vite's dev server to
+         process this file through the module bundler. Placed at the end of <body>
+         so the #root div exists in the DOM before the script tries to mount into it -->
+
   </body>
 </html>
