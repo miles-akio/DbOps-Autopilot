@@ -1,0 +1,369 @@
+================================================================================
+  DbOps Autopilot — src/ Folder Reference
+  Purpose and role of every file in the source directory
+================================================================================
+
+FOLDER STRUCTURE OVERVIEW
+--------------------------
+
+src/
+├── main.jsx
+├── App.jsx
+├── components/
+│   ├── FleetDashboard.jsx
+│   ├── PlaybookGenerator.jsx
+│   ├── StorageAdvisor.jsx
+│   └── RunbookPanel.jsx
+├── data/
+│   └── clusterData.js
+└── utils/
+    └── playbookGenerator.js
+
+
+================================================================================
+  ROOT LEVEL FILES
+================================================================================
+
+FILE: src/main.jsx
+------------------
+PURPOSE:
+  The entry point of the React application. This is the first JavaScript file
+  that runs when the app loads.
+
+WHAT IT DOES:
+  - Imports React and ReactDOM
+  - Finds the empty <div id="root"> in index.html
+  - Mounts the entire React application into that div
+  - Wraps the app in React StrictMode, which enables extra development warnings
+    and helps catch bugs early (StrictMode has no effect in production builds)
+
+ANALOGY:
+  Think of this as the ignition switch. It doesn't do any real work itself —
+  it just starts everything else.
+
+DEPENDS ON:
+  App.jsx (imports and renders it)
+
+
+--------------------------------------------------------------------------------
+
+FILE: src/App.jsx
+-----------------
+PURPOSE:
+  The top-level shell of the application. Controls the overall layout,
+  navigation bar, and which module is currently visible on screen.
+
+WHAT IT DOES:
+  - Renders the dark top navigation bar with the DbOps Autopilot logo
+  - Displays the four navigation tabs (Fleet Dashboard, Playbook Generator,
+    Storage Advisor, Runbook Automation)
+  - Tracks which tab is currently active using React state (useState)
+  - Conditionally renders the correct component based on the active tab
+  - Shows live cluster status indicators in the top bar (critical/warning/live)
+  - Displays the current time and region summary in the page header
+  - Injects global CSS (scrollbar styling, keyframe animations for pulsing
+    critical status dot)
+
+ANALOGY:
+  Think of this as the outer frame of a control room. It holds the panels
+  and lets you switch between them, but it doesn't contain any panel logic
+  itself.
+
+DEPENDS ON:
+  FleetDashboard.jsx, PlaybookGenerator.jsx, StorageAdvisor.jsx,
+  RunbookPanel.jsx, clusterData.js (for the critical/warning node counts
+  shown in the top bar)
+
+
+================================================================================
+  COMPONENTS FOLDER
+  Each file in this folder is a self-contained UI module — one per tab.
+================================================================================
+
+FILE: src/components/FleetDashboard.jsx
+----------------------------------------
+PURPOSE:
+  The Fleet Dashboard tab. Gives a real-time bird's-eye view of every
+  database node in the cluster with health indicators and resource metrics.
+
+WHAT IT DOES:
+  - Renders a summary row at the top showing total nodes, healthy count,
+    warning count, critical count, and aggregate QPS across the fleet
+  - Renders filter dropdowns for DB type, node status, and region
+  - Displays a responsive grid of NodeCard components — one per database node
+  - Each NodeCard shows: DB type badge, role (primary/replica), status badge,
+    node name, region/datacenter/rack, CPU/memory/disk progress bars,
+    QPS, p99 latency, and replication lag
+  - Clicking a node card opens a NodeDetail side panel with deeper info:
+    version, uptime, all metrics, a mini sparkline chart of recent QPS,
+    and a diagnostic alert explaining what is wrong on degraded nodes
+  - Clicking the same card again closes the detail panel
+
+KEY CONCEPTS DEMONSTRATED:
+  - The four golden signals of observability: latency (p99), traffic (QPS),
+    errors (status), saturation (CPU/memory/disk)
+  - Replication lag as a leading indicator of node degradation
+  - Multi-region, multi-datacenter, multi-rack topology awareness
+
+DEPENDS ON:
+  clusterData.js (dbNodes, clusterSummary, metricsHistory)
+
+
+--------------------------------------------------------------------------------
+
+FILE: src/components/PlaybookGenerator.jsx
+-------------------------------------------
+PURPOSE:
+  The Playbook Generator tab. Generates production-ready Ansible YAML
+  playbooks from a configuration form without writing any code.
+
+WHAT IT DOES:
+  - Renders a configuration panel on the left where the user selects:
+      - Database type (Cassandra, MySQL, Redis, Kafka, VictoriaMetrics, PostgreSQL)
+      - Operation (one of six available)
+      - Ansible host pattern (e.g. cassandra_nodes, prod_db, all)
+      - Remote user (e.g. ubuntu, ec2-user)
+      - Whether to use privilege escalation (become: yes/no)
+  - Renders operation cards for all six available operations, each showing
+    a name, description, risk level badge, and estimated runtime
+  - On clicking Generate, calls the generateAnsiblePlaybook() utility function
+    and displays the resulting YAML with syntax highlighting
+  - Comments in the YAML are rendered in gray, task names in blue,
+    module names in purple, and values in dark blue
+  - Provides a Copy to Clipboard button and a Download as .yml button
+  - Shows line count, estimated runtime, and risk level in the footer bar
+
+THE SIX OPERATIONS AVAILABLE:
+  1. Rolling Restart     — restart nodes one at a time with health checks
+  2. Backup & Restore    — snapshot to S3 with checksum verification
+  3. Automated Failover  — promote replica, update DNS, notify Slack
+  4. Force Compaction    — reclaim disk space with before/after reporting
+  5. Horizontal Scale-Out — provision new nodes and rebalance shards
+  6. TLS Cert Rotation   — rotate certs via Vault PKI with zero downtime
+
+DEPENDS ON:
+  playbookGenerator.js (generateAnsiblePlaybook),
+  clusterData.js (playbook_templates metadata)
+
+
+--------------------------------------------------------------------------------
+
+FILE: src/components/StorageAdvisor.jsx
+----------------------------------------
+PURPOSE:
+  The Storage Engine Advisor tab. Analyzes a workload profile and recommends
+  either B+-Tree or LSM-Tree as the appropriate storage engine, with scored
+  reasoning and a head-to-head tradeoff comparison.
+
+WHAT IT DOES:
+  - Renders a workload profile form on the left with:
+      - Read/Write ratio slider (0-100% reads)
+      - Workload type dropdown (OLTP, analytics, time-series, logs, cache, search)
+      - Update pattern dropdown (random, append-only, bulk loads, delete-heavy)
+      - Dataset size dropdown (small, medium, large, x-large)
+      - Latency requirement dropdown (ultra-low, low, medium, relaxed)
+      - Consistency requirement dropdown (strong, eventual, causal)
+  - On clicking Analyze, calls analyzeStorageEngine() with the profile inputs
+  - Displays the recommendation panel on the right with:
+      - A color-coded recommendation header (blue for B+-Tree, green for LSM-Tree)
+      - Suitability score bars for both engines (0-100)
+      - A numbered list of plain-language reasoning tied to the specific inputs
+      - A tradeoff table: write amplification, read amplification, space
+        amplification, update cost, and range scan performance side by side
+      - Badges listing real databases that use the recommended engine
+      - A nuanced "when to reconsider" note to pressure-test the recommendation
+
+KEY CONCEPTS DEMONSTRATED:
+  - B+-Tree internals: clustered index, in-place updates, O(log n) reads
+  - LSM-Tree internals: MemTable, SSTable, compaction, write buffering
+  - Amplification factors and how they affect hardware costs at scale
+  - How workload characteristics (read/write ratio, access pattern, consistency)
+    should drive storage engine selection
+
+DEPENDS ON:
+  playbookGenerator.js (analyzeStorageEngine)
+
+
+--------------------------------------------------------------------------------
+
+FILE: src/components/RunbookPanel.jsx
+--------------------------------------
+PURPOSE:
+  The Runbook Automation tab. Breaks common database operations into discrete,
+  documented steps with risk labels, shell commands, and simulated live output.
+
+WHAT IT DOES:
+  - Renders an operation selector for three high-value runbooks:
+      1. Rolling Restart
+      2. Backup & Restore
+      3. Automated Failover
+  - Renders a node picker: filter by DB type, then checkboxes for individual
+    target nodes with color-coded status dots
+  - Provides a Dry Run toggle — when enabled, steps simulate without executing
+  - On clicking Simulate/Execute, runs through each step sequentially with a
+    realistic delay, showing:
+      - The step number and action name
+      - A risk badge (none / low / medium / high) for each step
+      - The exact shell command that would run on the remote node
+      - Mock output representing what real execution would return
+  - Maintains a live execution log at the bottom with timestamps, node targets,
+    and per-step results
+  - High-risk operations (Failover) show a confirmation dialog before
+    executing in live (non-dry-run) mode
+  - A Reset button returns everything to idle state after completion
+
+KEY CONCEPTS DEMONSTRATED:
+  - Pre-flight checks before destructive operations (quorum check, lag check)
+  - STONITH (Shoot The Other Node In The Head) as a safe failover prerequisite
+  - Graceful drain patterns before stopping a service
+  - The importance of dry-run/rehearsal before touching production
+  - Audit logging as a built-in part of every operational workflow
+
+DEPENDS ON:
+  playbookGenerator.js (getRunbookSteps),
+  clusterData.js (dbNodes for the node picker)
+
+
+================================================================================
+  DATA FOLDER
+  Contains the simulated data layer. In production, this would be replaced
+  with API calls to Prometheus, VictoriaMetrics, or a custom backend.
+================================================================================
+
+FILE: src/data/clusterData.js
+------------------------------
+PURPOSE:
+  The single source of truth for all cluster data in the application.
+  Simulates what a real metrics backend (Prometheus, VictoriaMetrics) and
+  a service discovery system (Consul, Kubernetes) would provide via API.
+
+WHAT IT CONTAINS:
+
+  dbNodes (array)
+    An array of 10 node objects representing a realistic mixed-type cluster:
+    - 3 Cassandra nodes (dc1/dc2, healthy + warning)
+    - 2 Redis nodes (primary + replica, healthy)
+    - 2 MySQL nodes (both critical — high CPU, disk, replication lag)
+    - 2 Kafka brokers (both healthy)
+    - 1 VictoriaMetrics node (healthy)
+    Each node object contains: id, name, region, type, role, status,
+    cpu, memory, disk, replicationLag, shards, uptime, version,
+    connections, qps, p99Latency, rack, datacenter
+
+  clusterSummary (object)
+    Aggregated fleet-level stats: total nodes, healthy/warning/critical counts,
+    total QPS, average CPU, average memory, and active regions.
+    Pre-computed so the Fleet Dashboard doesn't recalculate on every render.
+
+  metricsHistory (array)
+    30 data points of simulated time-series metrics (total QPS, average latency,
+    error rate) used to render the mini sparkline chart in the node detail panel.
+    Values use sine waves + random noise to look realistic.
+
+  playbook_templates (object)
+    Metadata for each of the six available playbook operations: display name,
+    description, icon class, risk level, and estimated runtime. Used by both
+    the Playbook Generator (operation cards) and the footer info bar.
+
+HOW TO REPLACE WITH REAL DATA:
+  Swap the static exports for async fetch calls to your metrics backend.
+  The component interfaces don't change — only this file needs updating.
+  Example: export async function fetchNodes() { return fetch('/api/v1/nodes') }
+
+
+================================================================================
+  UTILS FOLDER
+  Contains pure logic functions — no React, no UI. These can be tested
+  independently and reused in a backend API if needed.
+================================================================================
+
+FILE: src/utils/playbookGenerator.js
+--------------------------------------
+PURPOSE:
+  The brain of the application. Contains three pure functions that power
+  the Playbook Generator, Storage Advisor, and Runbook Panel respectively.
+  No React imports, no UI code — only data in, data out.
+
+WHAT IT CONTAINS:
+
+  generateAnsiblePlaybook(config) → string
+    Takes a configuration object (dbType, operation, hosts, user, become)
+    and returns a complete Ansible YAML playbook as a string.
+
+    Supports six operations, each generating different play logic:
+    - rolling_restart: serial:1 execution, systemd stop/start, wait_for
+      port checks, health verification, connection restoration
+    - backup_restore: snapshot command per DB type, archive compression,
+      aws_s3 upload, sha256 checksum, retention cleanup with find/file
+    - failover: two-play structure (assessment + execution), STONITH via
+      aws ec2 stop-instances, replica promotion, route53 DNS update,
+      Slack notification via webhook
+    - compaction: async task with poll, disk usage before/after with df,
+      DB-specific compaction commands per type
+    - scale_out: package install, config template, cluster join wait loop,
+      shard rebalance delegation to existing primary
+    - cert_rotation: Vault PKI API call, certificate file writes with
+      correct permissions, openssl verify, SIGHUP reload, TLS handshake test
+
+    The DB-specific commands (backup, health check, port numbers) are all
+    conditionally branched per dbType so the output is accurate for each
+    database, not a generic template.
+
+  analyzeStorageEngine(profile) → object
+    Takes a workload profile object and returns a recommendation result.
+
+    Input fields: readWriteRatio, dataSize, updatePattern, latencyReq,
+    consistencyReq, workloadType
+
+    Logic:
+    - Read-heavy (>70%) + random updates or strong consistency → B+-Tree
+    - Write-heavy (<40%) or append-only or time-series/log → LSM-Tree
+    - Balanced (40-70%) → Hybrid/Configurable with nuanced guidance
+
+    Returns: recommendation name, suitability scores for both engines,
+    an array of reasoning strings tied to the actual input values,
+    a tradeoffs array for the comparison table, a bestFor array of
+    real databases, and an alternatives note.
+
+  getRunbookSteps(operation, dbType) → array
+    Takes an operation name and DB type, returns an ordered array of step
+    objects for the Runbook Panel to render and execute sequentially.
+
+    Each step object contains: step number, action description, the exact
+    shell command to run (tailored per dbType), and a risk level string.
+
+    Covers three operations: rolling_restart, backup_restore, failover.
+    Commands are accurate per DB type — MySQL steps show mysql CLI commands,
+    Redis steps show redis-cli commands, Cassandra steps show nodetool, etc.
+
+DESIGN NOTE:
+  Keeping this logic in a separate utils file means it can be moved to a
+  Node.js or Python backend API with minimal changes, enabling server-side
+  playbook generation and real execution via Ansible Runner or AWX.
+
+
+================================================================================
+  HOW THE FILES CONNECT (DATA FLOW)
+================================================================================
+
+  index.html
+    └── loads main.jsx
+          └── mounts App.jsx into #root
+                ├── [Fleet tab]     → FleetDashboard.jsx
+                │                       └── reads clusterData.js
+                │
+                ├── [Playbook tab]  → PlaybookGenerator.jsx
+                │                       ├── reads clusterData.js (templates)
+                │                       └── calls playbookGenerator.js (generateAnsiblePlaybook)
+                │
+                ├── [Storage tab]   → StorageAdvisor.jsx
+                │                       └── calls playbookGenerator.js (analyzeStorageEngine)
+                │
+                └── [Runbook tab]   → RunbookPanel.jsx
+                                        ├── reads clusterData.js (dbNodes)
+                                        └── calls playbookGenerator.js (getRunbookSteps)
+
+
+================================================================================
+  END OF REFERENCE
+================================================================================
